@@ -36,8 +36,7 @@ Need to switch adapters? Tap the IP inside the app and it cycles through every n
 
 ---
 
-## 📸 Show it off
-Drop screenshots, reels, or TikToks right here when you post them—AirPulse was made to be seen.
+## 📸 SCs
 
 ---
 
