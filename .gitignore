@@ -1,0 +1,26 @@
+# Build results
+bin/
+obj/
+
+# Publish artifacts
+Releases/
+
+# VS cache/options
+.vs/
+
+# User-specific files
+*.user
+*.suo
+
+# Logs
+*.log
+
+# Dotnet tooling
+.idea/
+.vscode/
+
+# Misc
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+

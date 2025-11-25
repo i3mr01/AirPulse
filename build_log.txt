@@ -1,0 +1,13 @@
+﻿  Determining projects to restore...
+  All projects are up-to-date for restore.
+C:\Users\i3mr0\OneDrive\Documents\Projects\AirPulse\MainWindow.xaml.cs(22,12): warning CS8618: Non-nullable field '_notifyIcon' must contain a non-null value when exiting constructor. Consider adding the 'required' modifier or declaring the field as nullable. [C:\Users\i3mr0\OneDrive\Documents\Projects\AirPulse\AirPulse.csproj]
+C:\Users\i3mr0\OneDrive\Documents\Projects\AirPulse\Hubs\MediaHub.cs(53,23): error CS1061: 'InputService' does not contain a definition for 'SendMediaKey' and no accessible extension method 'SendMediaKey' accepting a first argument of type 'InputService' could be found (are you missing a using directive or an assembly reference?) [C:\Users\i3mr0\OneDrive\Documents\Projects\AirPulse\AirPulse.csproj]
+
+Build FAILED.
+
+C:\Users\i3mr0\OneDrive\Documents\Projects\AirPulse\MainWindow.xaml.cs(22,12): warning CS8618: Non-nullable field '_notifyIcon' must contain a non-null value when exiting constructor. Consider adding the 'required' modifier or declaring the field as nullable. [C:\Users\i3mr0\OneDrive\Documents\Projects\AirPulse\AirPulse.csproj]
+C:\Users\i3mr0\OneDrive\Documents\Projects\AirPulse\Hubs\MediaHub.cs(53,23): error CS1061: 'InputService' does not contain a definition for 'SendMediaKey' and no accessible extension method 'SendMediaKey' accepting a first argument of type 'InputService' could be found (are you missing a using directive or an assembly reference?) [C:\Users\i3mr0\OneDrive\Documents\Projects\AirPulse\AirPulse.csproj]
+    1 Warning(s)
+    1 Error(s)
+
+Time Elapsed 00:00:02.02

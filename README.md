@@ -1,0 +1,45 @@
+# ✨ AirPulse
+> Remote-control magic for your PC — crafted with love by **@i3mr01**.
+
+AirPulse turns any phone into a buttery-smooth media remote and trackpad. Scan the QR code, punch in the PIN, and your desktop instantly feels futuristic.
+
+---
+
+## 🌈 Vibes
+- **Zero-fuss pairing** — launch the desktop app and a fresh PIN + QR appear right away.
+- **Live media tiles** — album art, titles, and playback state glow in real time.
+- **Gesture trackpad** — swipe, tap, and click from the couch like it’s built in.
+- **Tray-first design** — lives quietly until you need it, complete with auto-start.
+
+---
+
+## 🚀 Getting Rolling
+1. **Install & launch** `AirPulse.exe`.
+2. Hit the same Wi‑Fi as your PC, open the QR on your phone, or visit the URL shown.
+3. Enter the six-digit PIN (or let the QR fill it for you) and vibe out.
+
+Need to switch adapters? Tap the IP inside the app and it cycles through every network it finds.
+
+---
+
+ ## ⚙️ Under the hood
+ - Built on **.NET 8 + WPF** so it feels native on Windows.
+ - Embedded **ASP.NET Core + SignalR** server powers the live pairing magic.
+ - The mobile UI is a slick **Tailwind** single page living in `wwwroot`.
+ 
+ ---
+ 
+## 🧠 Little extras
+- Auto firewall helper if Windows gets grumpy.
+- Optional “Start with Windows” toggle.
+- Handy tray menu so the window stays out of your way.
+
+---
+
+## 📸 Show it off
+Drop screenshots, reels, or TikToks right here when you post them—AirPulse was made to be seen.
+
+---
+
+Built proudly by **@i3mr01**. Run it, share it, enjoy it. 💙
+

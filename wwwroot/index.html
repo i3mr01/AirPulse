@@ -1,0 +1,543 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>AirPulse Remote</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/8.0.0/signalr.min.js"></script>
+    <style>
+        body {
+            background-color: #000;
+            color: white;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            overflow: hidden;
+            touch-action: none;
+        }
+
+        .glass {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .btn-press:active {
+            transform: scale(0.95);
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        #trackpad {
+            touch-action: none;
+        }
+
+        /* Segmented Control */
+        .segmented-control {
+            position: relative;
+            display: flex;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 9999px;
+            padding: 4px;
+            margin-bottom: 1rem;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .segment-btn {
+            flex: 1;
+            text-align: center;
+            padding: 8px;
+            font-size: 0.875rem;
+            font-weight: 600;
+            z-index: 10;
+            color: #9ca3af;
+            transition: color 0.3s ease;
+        }
+
+        .segment-btn.active {
+            color: white;
+        }
+
+        .segment-indicator {
+            position: absolute;
+            top: 4px;
+            bottom: 4px;
+            left: 4px;
+            width: calc(50% - 4px);
+            background: rgba(255, 255, 255, 0.15);
+            border-radius: 9999px;
+            transition: transform 0.3s cubic-bezier(0.4, 0.0, 0.2, 1);
+            backdrop-filter: blur(4px);
+        }
+
+        /* View Transitions */
+        .view-container {
+            transition: opacity 0.3s ease, transform 0.3s ease;
+            width: 100%;
+            height: 100%;
+        }
+
+        .view-hidden {
+            opacity: 0;
+            pointer-events: none;
+            position: absolute;
+            top: 0;
+            left: 0;
+        }
+
+        .view-visible {
+            opacity: 1;
+            position: relative;
+            transform: translateX(0);
+        }
+    </style>
+</head>
+
+<body class="h-screen w-screen flex flex-col items-center justify-center bg-gradient-to-br from-gray-900 to-black">
+
+    <!-- Debug Log -->
+    <div id="debug-log"
+        class="fixed bottom-0 left-0 w-full h-32 bg-black bg-opacity-80 text-green-400 text-xs font-mono p-2 overflow-y-auto hidden pointer-events-none z-50">
+    </div>
+
+    <!-- Pairing Screen -->
+    <div id="pairing-screen" class="flex flex-col items-center gap-6 w-full max-w-md p-6">
+        <h1 class="text-4xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-purple-600 cursor-pointer"
+            onclick="toggleDebug()">AirPulse</h1>
+        <p class="text-gray-400">Enter PIN from desktop app</p>
+        <button onclick="toggleDebug()"
+            class="text-xs text-gray-500 underline hover:text-gray-300 transition-colors">Show Debug Logs</button>
+
+        <!-- Connection Status Indicator -->
+        <div id="connection-status" class="text-yellow-500 text-sm font-mono animate-pulse">Connecting...</div>
+
+        <!-- Retry Button (Hidden by default) -->
+        <button id="retry-btn" onclick="startConnection()"
+            class="hidden px-4 py-2 bg-red-600 rounded-lg text-sm font-bold hover:bg-red-700 transition-colors">Retry
+            Connection</button>
+
+        <div class="flex gap-2">
+            <input type="number" id="pin-input"
+                class="glass text-center text-3xl tracking-widest w-48 h-16 rounded-2xl outline-none focus:border-blue-500 transition-colors"
+                placeholder="000000" maxlength="6">
+        </div>
+        <button id="connect-btn" onclick="attemptPair()" disabled
+            class="w-full h-14 bg-blue-600 rounded-2xl font-bold text-lg active:scale-95 transition-transform opacity-50 cursor-not-allowed">Connecting...</button>
+    </div>
+
+    <!-- Main Interface -->
+    <div id="main-interface" class="hidden flex-col h-full w-full max-w-md p-4 gap-2">
+        <!-- Header -->
+        <div class="flex justify-between items-center px-2 mb-2">
+            <span class="font-bold text-lg">AirPulse</span>
+            <div id="status-dot" class="w-2 h-2 rounded-full bg-yellow-500 shadow-[0_0_10px_rgba(234,179,8,0.8)]"></div>
+        </div>
+
+        <!-- Tab Switcher -->
+        <div class="segmented-control">
+            <div id="tab-indicator" class="segment-indicator"></div>
+            <button onclick="switchTab('media')" id="btn-media" class="segment-btn active">Media</button>
+            <button onclick="switchTab('trackpad')" id="btn-trackpad" class="segment-btn">Trackpad</button>
+        </div>
+
+        <!-- Views Container -->
+        <div class="relative w-full flex-1 overflow-hidden">
+
+            <!-- Media View -->
+            <div id="media-view" class="view-container view-visible flex flex-col items-center justify-center gap-4">
+                <div class="glass rounded-3xl p-6 flex flex-col items-center gap-4 shadow-2xl w-full">
+                    <div class="w-64 h-64 rounded-2xl overflow-hidden bg-gray-800 shadow-lg relative">
+                        <img id="album-art" src="" class="w-full h-full object-cover hidden">
+                        <div id="no-art" class="w-full h-full flex items-center justify-center text-gray-600 text-4xl">
+                            🎵</div>
+                    </div>
+                    <div class="text-center w-full">
+                        <h2 id="track-title" class="text-xl font-bold truncate">Not Playing</h2>
+                        <p id="track-artist" class="text-gray-400 truncate">Unknown Artist</p>
+                    </div>
+                    <div class="flex items-center justify-center gap-6 mt-2 w-full">
+                        <button onclick="sendMedia('prev')" class="p-4 rounded-full glass btn-press">
+                            <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
+                                <path d="M6 6h2v12H6zm3.5 6l8.5 6V6z" />
+                            </svg>
+                        </button>
+                        <button onclick="sendMedia('playpause')"
+                            class="p-6 rounded-full bg-white text-black btn-press shadow-lg hover:bg-gray-200 transition-colors">
+                            <svg id="play-icon" class="w-8 h-8" fill="currentColor" viewBox="0 0 24 24">
+                                <path d="M8 5v14l11-7z" />
+                            </svg>
+                            <svg id="pause-icon" class="w-8 h-8 hidden" fill="currentColor" viewBox="0 0 24 24">
+                                <path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z" />
+                            </svg>
+                        </button>
+                        <button onclick="sendMedia('next')" class="p-4 rounded-full glass btn-press">
+                            <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
+                                <path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z" />
+                            </svg>
+                        </button>
+                    </div>
+                    <div class="flex w-full justify-between px-4 mt-2">
+                        <button onclick="sendMedia('voldown')" class="p-3 rounded-xl glass btn-press text-gray-400">
+                            <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                                <path
+                                    d="M18.5 12c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM5 9v6h4l5 5V4L9 9H5z" />
+                            </svg>
+                        </button>
+                        <button onclick="sendMedia('volup')" class="p-3 rounded-xl glass btn-press text-gray-400">
+                            <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                                <path
+                                    d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z" />
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Trackpad View -->
+            <div id="trackpad-view" class="view-container view-hidden h-full">
+                <div id="trackpad"
+                    class="w-full h-full glass rounded-3xl flex items-center justify-center relative overflow-hidden">
+                    <div class="text-gray-600 text-sm pointer-events-none select-none">Trackpad Area</div>
+                    <div class="absolute bottom-4 text-xs text-gray-700 pointer-events-none">Tap to click • Drag to move
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <script>
+        // --- Logging & Error Handling ---
+        function log(msg) {
+            console.log(msg);
+            const logDiv = document.getElementById('debug-log');
+            if (logDiv) {
+                logDiv.innerHTML += `<div>${new Date().toLocaleTimeString()} - ${msg}</div>`;
+                logDiv.scrollTop = logDiv.scrollHeight;
+            }
+        }
+
+        window.onerror = function (msg, url, line, col, error) {
+            const logDiv = document.getElementById('debug-log');
+            if (logDiv) {
+                logDiv.classList.remove('hidden');
+                let extra = "";
+                if (error && error.stack) extra = `<br><pre class="whitespace-pre-wrap text-red-300 mt-1">${error.stack}</pre>`;
+                logDiv.innerHTML += `<div class="border-b border-gray-800 py-1">
+                    <strong class="text-red-500">ERROR:</strong> ${msg}<br>
+                    <span class="text-gray-500 text-[10px]">${url}:${line}:${col}</span>
+                    ${extra}
+                </div>`;
+                logDiv.scrollTop = logDiv.scrollHeight;
+            }
+            return false;
+        };
+
+        let tapCount = 0;
+        function toggleDebug() {
+            const logDiv = document.getElementById('debug-log');
+            if (logDiv.classList.contains('hidden')) {
+                logDiv.classList.remove('hidden');
+                log("Debug logs visible");
+            } else {
+                logDiv.classList.add('hidden');
+            }
+        }
+
+        // --- SignalR Setup ---
+        if (typeof signalR === 'undefined') {
+            log("CRITICAL: SignalR library not loaded.");
+            alert("Error: SignalR library failed to load. Check internet connection.");
+            throw new Error("SignalR missing");
+        }
+
+        const connection = new signalR.HubConnectionBuilder()
+            .withUrl("/mediaHub", {
+                transport: signalR.HttpTransportType.WebSockets | signalR.HttpTransportType.LongPolling
+            })
+            .configureLogging(signalR.LogLevel.Information)
+            .withAutomaticReconnect([0, 2000, 5000, 10000, null])
+            .build();
+
+        let isPaired = false;
+        let connectionTimeout = null;
+
+        // --- UI Updates ---
+        const connectBtn = document.getElementById('connect-btn');
+        const statusText = document.getElementById('connection-status');
+        const retryBtn = document.getElementById('retry-btn');
+
+        function updateConnectionStatus(state, errorMsg) {
+            if (state === "Connected") {
+                if (connectBtn) {
+                    connectBtn.disabled = false;
+                    connectBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+                    connectBtn.innerText = "Connect";
+                }
+                if (statusText) {
+                    statusText.innerText = "Server Found";
+                    statusText.className = "text-green-500 text-sm font-mono";
+                }
+                if (retryBtn) retryBtn.classList.add('hidden');
+                document.getElementById('status-dot').classList.replace('bg-yellow-500', 'bg-green-500');
+                document.getElementById('status-dot').classList.replace('bg-red-500', 'bg-green-500');
+                document.getElementById('status-dot').classList.replace('shadow-[0_0_10px_rgba(234,179,8,0.8)]', 'shadow-[0_0_10px_rgba(34,197,94,0.8)]');
+            } else if (state === "Connecting") {
+                if (connectBtn) {
+                    connectBtn.disabled = true;
+                    connectBtn.classList.add('opacity-50', 'cursor-not-allowed');
+                    connectBtn.innerText = "Connecting...";
+                }
+                if (statusText) {
+                    statusText.innerText = "Searching for PC...";
+                    statusText.className = "text-yellow-500 text-sm font-mono animate-pulse";
+                }
+                if (retryBtn) retryBtn.classList.add('hidden');
+                document.getElementById('status-dot').classList.replace('bg-green-500', 'bg-yellow-500');
+                document.getElementById('status-dot').classList.replace('bg-red-500', 'bg-yellow-500');
+            } else {
+                if (connectBtn) {
+                    connectBtn.disabled = false;
+                    connectBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+                    connectBtn.innerText = "Retry Connection";
+                    connectBtn.onclick = startConnection;
+                }
+                if (statusText) {
+                    statusText.innerText = errorMsg || "Disconnected";
+                    statusText.className = "text-red-500 text-sm font-mono";
+                }
+                if (retryBtn) retryBtn.classList.remove('hidden');
+                document.getElementById('status-dot').classList.replace('bg-green-500', 'bg-red-500');
+                document.getElementById('status-dot').classList.replace('bg-yellow-500', 'bg-red-500');
+            }
+        }
+
+        // --- Initialization ---
+        const urlParams = new URLSearchParams(window.location.search);
+        const urlPin = urlParams.get('pin');
+
+        if (urlPin) {
+            document.getElementById('pin-input').value = urlPin;
+            document.getElementById('pin-input').parentElement.classList.add('hidden');
+            document.getElementById('connect-btn').classList.add('hidden');
+            document.getElementById('connection-status').innerText = "Authenticating with QR Code...";
+            document.getElementById('connection-status').className = "text-blue-400 text-sm font-mono animate-pulse";
+        }
+
+        async function startConnection() {
+            if (connection.state === "Connected") {
+                log("Already connected.");
+                return;
+            }
+
+            // Strict state check to prevent "Cannot start..." errors
+            if (connection.state !== signalR.HubConnectionState.Disconnected) {
+                log("Skipping start, state is: " + connection.state);
+                return;
+            }
+
+            if (!urlPin) updateConnectionStatus("Connecting");
+
+            if (connectionTimeout) clearTimeout(connectionTimeout);
+            connectionTimeout = setTimeout(async () => {
+                if (connection.state !== "Connected") {
+                    log("Connection timed out. Stopping...");
+                    try {
+                        await connection.stop();
+                        log("Connection stopped by timeout.");
+                    } catch (e) {
+                        log("Error stopping: " + e);
+                    }
+                    updateConnectionStatus("Disconnected", "Connection Timed Out");
+                }
+            }, 5000);
+
+            try {
+                log("Starting connection (Auto-Transport)...");
+                await connection.start();
+                log("Connected to SignalR");
+                clearTimeout(connectionTimeout);
+
+                if (!urlPin) {
+                    updateConnectionStatus("Connected");
+                    connectBtn.onclick = attemptPair;
+                }
+
+                const currentPin = document.getElementById('pin-input').value;
+                if (currentPin && currentPin.length === 6) {
+                    attemptPair();
+                }
+            } catch (err) {
+                log("Connection Error: " + err.toString());
+                clearTimeout(connectionTimeout);
+                if (!urlPin) updateConnectionStatus("Disconnected", "Connection Failed");
+
+                if (connection.state === signalR.HubConnectionState.Disconnected) {
+                    setTimeout(startConnection, 3000);
+                }
+            }
+        }
+
+        connection.onclose((error) => {
+            log("Connection closed. Error: " + (error ? error.toString() : "Unknown"));
+            updateConnectionStatus("Disconnected", "Connection Lost");
+        });
+
+        connection.onreconnecting((error) => {
+            log("Reconnecting... " + (error ? error.toString() : ""));
+            updateConnectionStatus("Connecting");
+        });
+
+        connection.onreconnected((connectionId) => {
+            log("Reconnected. ID: " + connectionId);
+            updateConnectionStatus("Connected");
+        });
+
+        connection.on("ReceiveMediaUpdate", (info) => {
+            if (!isPaired) return;
+            updateMediaUI(info);
+        });
+
+        async function attemptPair() {
+            const pin = document.getElementById('pin-input').value;
+            log("Attempting pair with PIN: " + pin);
+
+            if (pin.length !== 6) {
+                log("Invalid PIN length");
+                alert("PIN must be 6 digits");
+                return;
+            }
+
+            if (connection.state !== "Connected") {
+                log("Not connected. State: " + connection.state);
+                return;
+            }
+
+            try {
+                const success = await connection.invoke("Pair", pin);
+                if (success) {
+                    log("Pairing successful!");
+                    isPaired = true;
+                    document.getElementById('pairing-screen').classList.add('hidden');
+                    document.getElementById('main-interface').classList.remove('hidden');
+                    document.getElementById('main-interface').classList.add('flex');
+                } else {
+                    log("Incorrect PIN");
+                    alert("Incorrect PIN");
+                }
+            } catch (err) {
+                log("Pairing Error: " + err.toString());
+                alert("Pairing Error: " + err.message);
+            }
+        }
+
+        function updateMediaUI(info) {
+            document.getElementById('track-title').innerText = info.title || "Unknown Title";
+            document.getElementById('track-artist').innerText = info.artist || "Unknown Artist";
+
+            const art = document.getElementById('album-art');
+            const noArt = document.getElementById('no-art');
+
+            if (info.albumArtBase64) {
+                art.src = "data:image/png;base64," + info.albumArtBase64;
+                art.classList.remove('hidden');
+                noArt.classList.add('hidden');
+            } else {
+                art.classList.add('hidden');
+                noArt.classList.remove('hidden');
+            }
+
+            if (info.isPlaying) {
+                document.getElementById('play-icon').classList.add('hidden');
+                document.getElementById('pause-icon').classList.remove('hidden');
+            } else {
+                document.getElementById('play-icon').classList.remove('hidden');
+                document.getElementById('pause-icon').classList.add('hidden');
+            }
+        }
+
+        function sendMedia(cmd) {
+            if (!isPaired) return;
+            connection.invoke("SendInput", cmd);
+        }
+
+        // --- Trackpad Logic ---
+        const trackpad = document.getElementById('trackpad');
+        let lastX = 0, lastY = 0;
+        let isTouching = false;
+        let touchStartTime = 0;
+
+        trackpad.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            const touch = e.touches[0];
+            lastX = touch.clientX;
+            lastY = touch.clientY;
+            isTouching = true;
+            touchStartTime = Date.now();
+        }, { passive: false });
+
+        trackpad.addEventListener('touchmove', (e) => {
+            e.preventDefault();
+            if (!isTouching) return;
+
+            const touch = e.touches[0];
+            const deltaX = Math.round((touch.clientX - lastX) * 1.5);
+            const deltaY = Math.round((touch.clientY - lastY) * 1.5);
+
+            if (deltaX !== 0 || deltaY !== 0) {
+                connection.invoke("SendMouse", deltaX, deltaY);
+                lastX = touch.clientX;
+                lastY = touch.clientY;
+            }
+        }, { passive: false });
+
+        trackpad.addEventListener('touchend', (e) => {
+            e.preventDefault();
+            isTouching = false;
+            const duration = Date.now() - touchStartTime;
+            if (duration < 200) {
+                connection.invoke("SendClick");
+            }
+        });
+
+        // --- Tab Switching ---
+        function switchTab(tab) {
+            const indicator = document.getElementById('tab-indicator');
+            const btnMedia = document.getElementById('btn-media');
+            const btnTrackpad = document.getElementById('btn-trackpad');
+            const viewMedia = document.getElementById('media-view');
+            const viewTrackpad = document.getElementById('trackpad-view');
+
+            if (tab === 'media') {
+                indicator.style.transform = 'translateX(0)';
+                btnMedia.classList.add('active');
+                btnTrackpad.classList.remove('active');
+
+                viewMedia.classList.remove('view-hidden');
+                viewMedia.classList.add('view-visible');
+                viewTrackpad.classList.add('view-hidden');
+                viewTrackpad.classList.remove('view-visible');
+
+                viewTrackpad.style.transform = 'translateX(20px)';
+                viewMedia.style.transform = 'translateX(0)';
+            } else {
+                indicator.style.transform = 'translateX(100%)';
+                btnTrackpad.classList.add('active');
+                btnMedia.classList.remove('active');
+
+                viewTrackpad.classList.remove('view-hidden');
+                viewTrackpad.classList.add('view-visible');
+                viewMedia.classList.add('view-hidden');
+                viewMedia.classList.remove('view-visible');
+
+                viewMedia.style.transform = 'translateX(-20px)';
+                viewTrackpad.style.transform = 'translateX(0)';
+            }
+        }
+
+        // Start
+        startConnection();
+    </script>
+</body>
+
+</html>
