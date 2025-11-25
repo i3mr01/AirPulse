@@ -1,8 +1,9 @@
 # ✨ AirPulse
 > Remote-control magic for your PC — crafted with love by **@i3mr01**.
+
+AirPulse turns any phone into a buttery-smooth media remote and trackpad. Scan the QR code, punch in the PIN, and your desktop instantly feels futuristic.
 [![GitHub release](https://img.shields.io/github/release/i3mr01/AirPulse.svg)](https://github.com/i3mr01/AirPulse/releases)
 [![GitHub downloads](https://img.shields.io/github/downloads/i3mr01/AirPulse/total.svg)](https://github.com/i3mr01/AirPulse/releases)
-AirPulse turns any phone into a buttery-smooth media remote and trackpad. Scan the QR code, punch in the PIN, and your desktop instantly feels futuristic.
 
 ---
 
