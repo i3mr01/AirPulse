@@ -37,6 +37,13 @@ Need to switch adapters? Tap the IP inside the app and it cycles through every n
 ---
 
 ## 📸 SCs
+<div align="center">
+
+<img src="AirPulse/Resources/1.png" alt="Screenshot 1" width="75%"/>
+
+<img src="AirPulse/Resources/2.png" alt="Screenshot 2" width="50%"/>
+
+<img src="AirPulse/Resources/3.png" alt="Screenshot 3" width="50%"/>
 
 ---
 
